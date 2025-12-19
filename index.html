@@ -25,7 +25,6 @@ canvas{display:block}
 <video id="cam" autoplay playsinline style="display:none"></video>
 
 <!-- LOCAL HIPPARCOS -->
-<script src="./hipparcos_6.5_concise.js"></script>
 
 <script type="importmap">
 {
@@ -35,7 +34,9 @@ canvas{display:block}
 }
 </script>
 
-<script type="module">
+<script type="module">  
+import "./hipparcos_6.5_concise.js";
+
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js";
 import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/controls/OrbitControls.js";
 
