@@ -24,8 +24,6 @@ canvas{display:block}
 
 <video id="cam" autoplay playsinline style="display:none"></video>
 
-<!-- LOCAL HIPPARCOS -->
-
 <script type="importmap">
 {
   "imports": {
@@ -34,41 +32,41 @@ canvas{display:block}
 }
 </script>
 
-<script type="module">  
-import "./hipparcos_6.5_concise.js";
-
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js";
+<script type="module">
+/* ================= IMPORTS ================= */
+import * as THREE from "three";
 import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/controls/OrbitControls.js";
+import { hipparcos_6_5 } from "./hipparcos_6.5_concise.js";
 
 /* ================= BASIC ================= */
-const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(innerWidth,innerHeight);
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 document.body.appendChild(renderer.domElement);
 
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x000005);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000005);
 
-const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,8000);
-camera.position.set(0,30,220);
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 8000);
+camera.position.set(0, 30, 220);
 
-const controls=new OrbitControls(camera,renderer.domElement);
-controls.enableDamping=true;
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
 
-scene.add(new THREE.AmbientLight(0x222233,0.6));
+scene.add(new THREE.AmbientLight(0x222233, 0.6));
 
 /* ================= ROOT ================= */
-const galaxyRoot=new THREE.Group();
+const galaxyRoot = new THREE.Group();
 scene.add(galaxyRoot);
 
 /* ================= HELPERS ================= */
-function raDecToVec3(raDeg, decDeg, r=1200){
-  const ra=THREE.MathUtils.degToRad(raDeg);
-  const dec=THREE.MathUtils.degToRad(decDeg);
+function raDecToVec3(raDeg, decDeg, r = 1200) {
+  const ra = THREE.MathUtils.degToRad(raDeg);
+  const dec = THREE.MathUtils.degToRad(decDeg);
   return new THREE.Vector3(
-    r*Math.cos(dec)*Math.cos(ra),
-    r*Math.sin(dec),
-    r*Math.cos(dec)*Math.sin(ra)
+    r * Math.cos(dec) * Math.cos(ra),
+    r * Math.sin(dec),
+    r * Math.cos(dec) * Math.sin(ra)
   );
 }
 
@@ -76,42 +74,37 @@ function raDecToVec3(raDeg, decDeg, r=1200){
 /* ===================== SOLAR SYSTEM ====================== */
 /* ========================================================= */
 
-const solarSystem=new THREE.Group();
+const solarSystem = new THREE.Group();
 galaxyRoot.add(solarSystem);
 
-const tl=new THREE.TextureLoader();
-const T={
-  sun:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_sun.jpg"),
-  mercury:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_mercury.jpg"),
-  venus:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_venus_surface.jpg"),
-  earth:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_earth_daymap.jpg"),
-  mars:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_mars.jpg"),
-  jupiter:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_jupiter.jpg"),
-  saturn:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_saturn.jpg"),
-  saturnRing:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_saturn_ring_alpha.png"),
-  uranus:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_uranus.jpg"),
-  neptune:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_neptune.jpg")
+const tl = new THREE.TextureLoader();
+const T = {
+  sun: tl.load("https://diwakarasd.github.io/galaxy-textures/2k_sun.jpg"),
+  mercury: tl.load("https://diwakarasd.github.io/galaxy-textures/2k_mercury.jpg"),
+  venus: tl.load("https://diwakarasd.github.io/galaxy-textures/2k_venus_surface.jpg"),
+  earth: tl.load("https://diwakarasd.github.io/galaxy-textures/2k_earth_daymap.jpg"),
+  mars: tl.load("https://diwakarasd.github.io/galaxy-textures/2k_mars.jpg"),
+  jupiter: tl.load("https://diwakarasd.github.io/galaxy-textures/2k_jupiter.jpg"),
+  saturn: tl.load("https://diwakarasd.github.io/galaxy-textures/2k_saturn.jpg"),
+  saturnRing: tl.load("https://diwakarasd.github.io/galaxy-textures/2k_saturn_ring_alpha.png"),
+  uranus: tl.load("https://diwakarasd.github.io/galaxy-textures/2k_uranus.jpg"),
+  neptune: tl.load("https://diwakarasd.github.io/galaxy-textures/2k_neptune.jpg")
 };
 
-const sun=new THREE.Mesh(
+const sun = new THREE.Mesh(
   new THREE.SphereGeometry(12,48,32),
-  new THREE.MeshBasicMaterial({map:T.sun})
+  new THREE.MeshBasicMaterial({ map: T.sun })
 );
 solarSystem.add(sun);
-solarSystem.add(new THREE.PointLight(0xfff2cc,3,3000));
+solarSystem.add(new THREE.PointLight(0xfff2cc, 3, 3000));
 
 /* ========================================================= */
 /* ===================== HIPPARCOS STARS =================== */
 /* ========================================================= */
 
-const starMap={};
+const starMap = {};
 
-function loadStars(){
-  if (!window.hipparcos_6_5) {
-    console.error("Hipparcos data not loaded");
-    return;
-  }
-
+function loadStars() {
   const pos = [];
   const col = [];
 
@@ -126,8 +119,8 @@ function loadStars(){
   });
 
   const g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute("color", new THREE.Float32BufferAttribute(col,3));
 
   galaxyRoot.add(new THREE.Points(
     g,
@@ -146,55 +139,64 @@ function loadStars(){
 
 let constellationLines;
 
-async function loadConstellations(){
-  const data=await fetch("./constellations_iau.json").then(r=>r.json());
+async function loadConstellations() {
+  const data = await fetch("./constellations_iau.json").then(r => r.json());
 
-  const pts=[];
-  data.constellations.forEach(c=>{
-    c.lines.forEach(([a,b])=>{
-      const s1=starMap[a];
-      const s2=starMap[b];
-      if(!s1||!s2)return;
+  const pts = [];
+  data.constellations.forEach(c => {
+    c.lines.forEach(([a,b]) => {
+      const s1 = starMap[a];
+      const s2 = starMap[b];
+      if (!s1 || !s2) return;
 
-      const v1=raDecToVec3(s1.RAdeg,s1.DEdeg,1190);
-      const v2=raDecToVec3(s2.RAdeg,s2.DEdeg,1190);
-      pts.push(v1.x,v1.y,v1.z,v2.x,v2.y,v2.z);
+      const v1 = raDecToVec3(s1.RAdeg, s1.DEdeg, 1190);
+      const v2 = raDecToVec3(s2.RAdeg, s2.DEdeg, 1190);
+      pts.push(v1.x,v1.y,v1.z, v2.x,v2.y,v2.z);
     });
   });
 
-  constellationLines=new THREE.LineSegments(
+  constellationLines = new THREE.LineSegments(
     new THREE.BufferGeometry().setAttribute(
-      "position",new THREE.Float32BufferAttribute(pts,3)
+      "position", new THREE.Float32BufferAttribute(pts,3)
     ),
     new THREE.LineBasicMaterial({
-      color:0x66ccff,
-      transparent:true,
-      opacity:0.6
+      color: 0x66ccff,
+      transparent: true,
+      opacity: 0.6
     })
   );
+
   galaxyRoot.add(constellationLines);
 }
 
-toggleConst.onclick=()=>constellationLines.visible=!constellationLines.visible;
+toggleConst.onclick = () => {
+  constellationLines.visible = !constellationLines.visible;
+};
 
 /* ================= HAND GESTURES ================= */
-let scale=1,rx=0,ry=0;
-function initHands(){
-  if(!window.Hands)return setTimeout(initHands,150);
-  const hands=new Hands({
-    locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+let scale=1, rx=0, ry=0;
+
+function initHands() {
+  if (!window.Hands) return setTimeout(initHands,150);
+
+  const hands = new Hands({
+    locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
   });
-  hands.setOptions({maxNumHands:1});
-  hands.onResults(r=>{
-    if(!r.multiHandLandmarks)return;
-    const lm=r.multiHandLandmarks[0];
-    const d=Math.hypot(lm[4].x-lm[8].x,lm[4].y-lm[8].y);
-    scale+=((0.7+d*5)-scale)*.12;
-    rx+=(lm[5].y-.5-rx)*.1;
-    ry+=(lm[5].x-.5-ry)*.1;
+  hands.setOptions({ maxNumHands: 1 });
+
+  hands.onResults(r => {
+    if (!r.multiHandLandmarks) return;
+    const lm = r.multiHandLandmarks[0];
+    const d = Math.hypot(lm[4].x-lm[8].x, lm[4].y-lm[8].y);
+    scale += ((0.7 + d*5) - scale) * 0.12;
+    rx += (lm[5].y - 0.5 - rx) * 0.1;
+    ry += (lm[5].x - 0.5 - ry) * 0.1;
   });
+
   new Camera(cam,{
-    onFrame:async()=>{try{await hands.send({image:cam});}catch(e){}}
+    onFrame: async () => {
+      try { await hands.send({image:cam}); } catch(e){}
+    }
   }).start();
 }
 initHands();
@@ -204,20 +206,20 @@ loadStars();
 await loadConstellations();
 
 /* ================= ANIMATE ================= */
-function animate(){
+function animate() {
   requestAnimationFrame(animate);
 
-  galaxyRoot.scale.lerp(new THREE.Vector3(scale,scale,scale),0.08);
-  galaxyRoot.rotation.x+=(rx-galaxyRoot.rotation.x)*.05;
-  galaxyRoot.rotation.y+=(ry-galaxyRoot.rotation.y)*.05;
+  galaxyRoot.scale.lerp(new THREE.Vector3(scale,scale,scale), 0.08);
+  galaxyRoot.rotation.x += (rx - galaxyRoot.rotation.x) * 0.05;
+  galaxyRoot.rotation.y += (ry - galaxyRoot.rotation.y) * 0.05;
 
   controls.update();
   renderer.render(scene,camera);
 }
 animate();
 
-addEventListener("resize",()=>{
-  camera.aspect=innerWidth/innerHeight;
+addEventListener("resize", () => {
+  camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
 });
