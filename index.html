@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Milky Way — Cinematic (Refined)</title>
+<title>Milky Way — 2 Arm + Galactic Core</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <style>
 html,body{margin:0;height:100%;background:#000;overflow:hidden}
@@ -19,6 +19,7 @@ canvas{display:block}
 
 <div id="ui">
 <b>Milky Way — Cinematic</b><br>
+2-arm spiral · Galactic Center glow<br>
 Scroll = Zoom · Drag = Rotate
 </div>
 
@@ -67,7 +68,9 @@ composer.addPass(new RenderPass(scene, camera));
 composer.addPass(
   new UnrealBloomPass(
     new THREE.Vector2(innerWidth, innerHeight),
-    0.6, 0.4, 0.75
+    0.7,   // bloom strength
+    0.45,
+    0.8
   )
 );
 
@@ -77,47 +80,49 @@ scene.add(galaxyRoot);
 
 /* ================= TEXTURES ================= */
 const tl = new THREE.TextureLoader();
-const starTex =
-  tl.load("https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/sprites/disc.png");
-const smokeTex =
-  tl.load("https://diwakarasd.github.io/galaxy-textures/smoke.png");
+const starTex = tl.load(
+  "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/sprites/disc.png"
+);
+const smokeTex = tl.load(
+  "https://diwakarasd.github.io/galaxy-textures/smoke.png"
+);
 
-/* ================= REALISTIC SCATTERED MILKY WAY ================= */
+/* ================= 2-ARM SCATTERED MILKY WAY ================= */
 function createMilkyWay() {
-  const stars = 30000;
+  const arms = 2; // REDUCED ARMS
+  const stars = 32000;
   const pos = [];
   const col = [];
 
   for (let i = 0; i < stars; i++) {
-    const isArm = Math.random() < 0.65; // rest are scattered / halo
+    const isArm = Math.random() < 0.7;
     const radius = Math.pow(Math.random(), 0.45) * 3000;
 
     let angle;
     if (isArm) {
-      const arm = Math.floor(Math.random() * 4);
+      const arm = Math.floor(Math.random() * arms);
       angle =
         radius * 0.003 +
-        arm * (Math.PI * 2 / 4) +
-        (Math.random() - 0.5) * 0.45; // blur arm
+        arm * (Math.PI * 2 / arms) +
+        (Math.random() - 0.5) * 0.55; // blurred arms
     } else {
       angle = Math.random() * Math.PI * 2;
     }
 
-    // scatter strength increases with radius
-    const scatter = (1 - Math.exp(-radius / 1200)) * 220;
+    const scatter = (1 - Math.exp(-radius / 1000)) * 260;
 
     const x = Math.cos(angle) * radius + (Math.random() - 0.5) * scatter;
     const z = Math.sin(angle) * radius + (Math.random() - 0.5) * scatter;
     const y =
       (Math.random() - 0.5) *
-      (120 + Math.random() * 160) *
+      (140 + Math.random() * 200) *
       Math.exp(-radius / 1600);
 
     pos.push(x, y, z);
 
     const c = new THREE.Color();
     c.setHSL(
-      0.58 + radius / 5200,
+      0.57 + radius / 5200,
       0.55 + Math.random() * 0.2,
       0.65 + Math.random() * 0.1
     );
@@ -141,8 +146,8 @@ function createMilkyWay() {
 }
 createMilkyWay();
 
-/* ================= LIGHT NEBULA (REDUCED DENSITY) ================= */
-for (let i = 0; i < 90; i++) {
+/* ================= NEBULA (LIGHT) ================= */
+for (let i = 0; i < 80; i++) {
   const sprite = new THREE.Sprite(
     new THREE.SpriteMaterial({
       map: smokeTex,
@@ -152,12 +157,12 @@ for (let i = 0; i < 90; i++) {
         0.5
       ),
       transparent: true,
-      opacity: 0.07,
+      opacity: 0.06,
       depthWrite: false
     })
   );
 
-  const r = 600 + Math.random() * 2600;
+  const r = 700 + Math.random() * 2600;
   const a = Math.random() * Math.PI * 2;
   sprite.position.set(
     Math.cos(a) * r,
@@ -165,9 +170,38 @@ for (let i = 0; i < 90; i++) {
     Math.sin(a) * r
   );
 
-  const s = 900 + Math.random() * 1200;
+  const s = 1000 + Math.random() * 1400;
   sprite.scale.set(s, s, 1);
   galaxyRoot.add(sprite);
+}
+
+/* ================= GALACTIC CENTER GLOW ================= */
+const coreGroup = new THREE.Group();
+galaxyRoot.add(coreGroup);
+
+// Dark core
+coreGroup.add(
+  new THREE.Mesh(
+    new THREE.SphereGeometry(120, 48, 32),
+    new THREE.MeshBasicMaterial({ color: 0x040404 })
+  )
+);
+
+// Lens-flare style glow
+for (let i = 0; i < 4; i++) {
+  const glow = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: starTex,
+      color: 0xffddaa,
+      transparent: true,
+      opacity: 0.25 / (i + 1),
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    })
+  );
+  const scale = 350 + i * 250;
+  glow.scale.set(scale, scale, 1);
+  coreGroup.add(glow);
 }
 
 /* ================= SOLAR SYSTEM ================= */
@@ -243,7 +277,7 @@ function animate() {
     );
   });
 
-  galaxyRoot.rotation.y += 0.0001;
+  galaxyRoot.rotation.y += 0.00008;
 
   controls.update();
   composer.render();
