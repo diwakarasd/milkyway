@@ -2,15 +2,24 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Spiral Milky Way + Solar System</title>
+<title>Milky Way Galaxy + Solar System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="icon" href="data:,">
 <style>
 html,body{margin:0;height:100%;background:#000;overflow:hidden}
 #ui{
-  position:fixed;left:16px;top:16px;
+  position:fixed;left:16px;top:16px;z-index:20;
   background:rgba(0,0,0,.45);
-  color:#fff;padding:10px 12px;
-  font-family:system-ui;border-radius:10px;
+  color:#fff;padding:12px;border-radius:10px;
+  font-family:system-ui;font-size:13px;
+}
+button{
+  margin-top:8px;
+  width:100%;
+  padding:6px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
 }
 canvas{display:block}
 </style>
@@ -19,16 +28,19 @@ canvas{display:block}
 
 <div id="ui">
 <b>Milky Way (Cinematic)</b><br>
+🌀 Spiral Galaxy<br>
+🪐 Solar System Inside<br>
 ✋ Pinch = Zoom<br>
-✋ Move palm = Rotate
+✋ Palm = Rotate
+<button id="enableGestures">Enable Gestures</button>
 </div>
 
 <video id="cam" autoplay playsinline style="display:none"></video>
 
 <script type="importmap">
 {
-  "imports":{
-    "three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js"
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js"
   }
 }
 </script>
@@ -45,15 +57,15 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 document.body.appendChild(renderer.domElement);
 
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x000005);
+scene.background=new THREE.Color(0x000006);
 
-const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.1,8000);
-camera.position.set(0,120,380);
+const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.1,9000);
+camera.position.set(0,120,420);
 
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;
-controls.minDistance=50;
-controls.maxDistance=2000;
+controls.minDistance=40;
+controls.maxDistance=3000;
 
 /* ================= ROOT ================= */
 const galaxyRoot=new THREE.Group();
@@ -64,82 +76,92 @@ const tl=new THREE.TextureLoader();
 const starTex=tl.load("https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/sprites/disc.png");
 const glowTex=tl.load("https://threejs.org/examples/textures/lensflare/lensflare0.png");
 
-/* ================= SPIRAL MILKY WAY ================= */
-function createSpiralGalaxy(){
-  const arms=4;
-  const pointsPerArm=6000;
-  const radius=1400;
+const T={
+  sun:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_sun.jpg"),
+  mercury:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_mercury.jpg"),
+  venus:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_venus_surface.jpg"),
+  earth:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_earth_daymap.jpg"),
+  mars:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_mars.jpg"),
+  jupiter:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_jupiter.jpg"),
+  saturn:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_saturn.jpg"),
+  saturnRing:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_saturn_ring_alpha.png")
+};
 
-  const positions=[];
-  const colors=[];
+/* ================= CINEMATIC SPIRAL ================= */
+function createGalaxy(){
+  const arms=4;
+  const starsPerArm=9000;
+  const radius=1600;
+
+  const pos=[],col=[];
 
   for(let a=0;a<arms;a++){
     const armOffset=(a/arms)*Math.PI*2;
-    for(let i=0;i<pointsPerArm;i++){
-      const t=i/pointsPerArm;
-      const angle=t*6 + armOffset;
-      const r=t*radius + Math.random()*40;
+
+    for(let i=0;i<starsPerArm;i++){
+      const t=Math.pow(Math.random(),0.35);
+      const angle=t*7+armOffset+(Math.random()-0.5)*0.5;
+      const r=t*radius*(0.85+Math.random()*0.3);
 
       const x=Math.cos(angle)*r;
       const z=Math.sin(angle)*r;
-      const y=(Math.random()-0.5)*60*Math.exp(-t*2);
+      const y=(Math.random()-0.5)*90*Math.exp(-t*3);
 
-      positions.push(x,y,z);
+      pos.push(x,y,z);
 
-      // color gradient (blue -> pink -> white)
-      const c=new THREE.Color();
-      c.setHSL(
-        0.65 - t*0.4,
-        0.7,
-        0.6 + (1-t)*0.25
-      );
-      colors.push(c.r,c.g,c.b);
+      let c=new THREE.Color();
+      if(t<0.18) c.setRGB(1.0,0.97,0.9);       // core
+      else if(t<0.55) c.setRGB(0.9,0.6,1.0);  // pink arms
+      else c.setRGB(0.55,0.7,1.0);             // blue halo
+
+      col.push(c.r,c.g,c.b);
     }
   }
 
   const g=new THREE.BufferGeometry();
-  g.setAttribute("position",new THREE.Float32BufferAttribute(positions,3));
-  g.setAttribute("color",new THREE.Float32BufferAttribute(colors,3));
+  g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute("color",new THREE.Float32BufferAttribute(col,3));
 
-  const mat=new THREE.PointsMaterial({
-    size:1.2,
-    vertexColors:true,
-    transparent:true,
-    blending:THREE.AdditiveBlending,
-    depthWrite:false
-  });
-
-  galaxyRoot.add(new THREE.Points(g,mat));
+  galaxyRoot.add(new THREE.Points(
+    g,
+    new THREE.PointsMaterial({
+      size:1.35,
+      vertexColors:true,
+      transparent:true,
+      blending:THREE.AdditiveBlending,
+      depthWrite:false
+    })
+  ));
 }
 
 /* ================= CORE GLOW ================= */
-function createCoreGlow(){
-  for(let i=0;i<12;i++){
+function coreGlow(){
+  for(let i=0;i<10;i++){
     const s=new THREE.Sprite(
       new THREE.SpriteMaterial({
         map:glowTex,
         color:0xfff2cc,
+        opacity:0.18,
         transparent:true,
-        blending:THREE.AdditiveBlending,
-        opacity:0.25
+        blending:THREE.AdditiveBlending
       })
     );
-    const scale=300 + i*180;
+    const scale=260+i*150;
     s.scale.set(scale,scale,1);
     galaxyRoot.add(s);
   }
 }
 
-/* ================= DUST CLOUDS ================= */
-function createDust(){
-  const count=2000;
+/* ================= NEBULA ================= */
+function nebula(){
+  const count=2600;
   const pos=[];
   for(let i=0;i<count;i++){
     const a=Math.random()*Math.PI*2;
-    const r=300+Math.random()*1000;
+    const r=400+Math.random()*1000;
     pos.push(
       Math.cos(a)*r,
-      (Math.random()-0.5)*120,
+      (Math.random()-0.5)*160,
       Math.sin(a)*r
     );
   }
@@ -149,26 +171,24 @@ function createDust(){
   galaxyRoot.add(new THREE.Points(
     g,
     new THREE.PointsMaterial({
-      size:18,
+      size:26,
       map:starTex,
       transparent:true,
-      opacity:0.08,
-      color:0x8899ff,
+      opacity:0.06,
+      color:0x6655ff,
       depthWrite:false
     })
   ));
 }
 
-createSpiralGalaxy();
-createCoreGlow();
-createDust();
+createGalaxy();
+coreGlow();
+nebula();
 
-/* ================= SOLAR SYSTEM ================= */
+/* ================= SUN ================= */
 const sun=new THREE.Mesh(
-  new THREE.SphereGeometry(14,48,32),
-  new THREE.MeshBasicMaterial({
-    map:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_sun.jpg")
-  })
+  new THREE.SphereGeometry(13,48,32),
+  new THREE.MeshBasicMaterial({map:T.sun})
 );
 galaxyRoot.add(sun);
 
@@ -176,45 +196,130 @@ const sunGlow=new THREE.Sprite(
   new THREE.SpriteMaterial({
     map:glowTex,
     color:0xffcc88,
-    blending:THREE.AdditiveBlending,
-    opacity:0.6
+    opacity:0.25,
+    blending:THREE.AdditiveBlending
   })
 );
-sunGlow.scale.set(160,160,1);
+sunGlow.scale.set(90,90,1);
 galaxyRoot.add(sunGlow);
+
+/* ================= PLANETS ================= */
+function planet(size,dist,speed,tex,ring=false){
+  const h=new THREE.Object3D();
+  galaxyRoot.add(h);
+
+  const m=new THREE.Mesh(
+    new THREE.SphereGeometry(size,48,32),
+    new THREE.MeshBasicMaterial({map:tex})
+  );
+  h.add(m);
+
+  if(ring){
+    const r=new THREE.Mesh(
+      new THREE.RingGeometry(size*1.3,size*2.4,64),
+      new THREE.MeshBasicMaterial({
+        map:T.saturnRing,
+        transparent:true,
+        side:THREE.DoubleSide,
+        depthWrite:false
+      })
+    );
+    r.rotation.x=Math.PI/2-0.3;
+    m.add(r);
+  }
+
+  return {h,m,dist,speed,a:Math.random()*Math.PI*2};
+}
+
+const planets=[
+  planet(1,20,0.018,T.mercury),
+  planet(2.3,30,0.012,T.venus),
+  planet(2.5,40,0.01,T.earth),
+  planet(1.4,50,0.008,T.mars),
+  planet(6,70,0.004,T.jupiter),
+  planet(5.5,95,0.003,T.saturn,true)
+];
+
+/* ================= ASTEROID BELT ================= */
+const beltPos=[];
+for(let i=0;i<1800;i++){
+  const a=Math.random()*Math.PI*2;
+  const r=55+Math.random()*13;
+  beltPos.push(
+    Math.cos(a)*r,
+    (Math.random()-0.5)*1.2,
+    Math.sin(a)*r
+  );
+}
+const beltGeo=new THREE.BufferGeometry();
+beltGeo.setAttribute("position",new THREE.Float32BufferAttribute(beltPos,3));
+const belt=new THREE.Points(
+  beltGeo,
+  new THREE.PointsMaterial({
+    size:0.08,
+    color:0x9b8f7f,
+    transparent:true,
+    opacity:0.85,
+    depthWrite:false
+  })
+);
+galaxyRoot.add(belt);
 
 /* ================= HAND GESTURES (SAFE) ================= */
 let scale=1,rx=0,ry=0;
-const lowMem=navigator.deviceMemory && navigator.deviceMemory<=4;
+let gesturesEnabled=false;
+
+document.getElementById("enableGestures").onclick=()=>{
+  if(gesturesEnabled) return;
+  gesturesEnabled=true;
+  initHands();
+};
 
 function initHands(){
-  if(lowMem) return;
-  if(typeof Hands==="undefined") return setTimeout(initHands,150);
-
+  if(typeof Hands==="undefined") return;
   const hands=new Hands({
     locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
   });
-  hands.setOptions({maxNumHands:1});
+  hands.setOptions({
+    maxNumHands:1,
+    modelComplexity:0,   // VERY IMPORTANT (memory safe)
+    minDetectionConfidence:0.6,
+    minTrackingConfidence:0.6
+  });
+
   hands.onResults(r=>{
     if(!r.multiHandLandmarks) return;
     const lm=r.multiHandLandmarks[0];
     const d=Math.hypot(lm[4].x-lm[8].x,lm[4].y-lm[8].y);
-    scale+=(0.7+d*5-scale)*0.12;
+    scale+=(THREE.MathUtils.clamp(0.6+d*6,0.5,3.2)-scale)*0.12;
     rx+=((lm[5].y-.5)-rx)*0.08;
     ry+=((lm[5].x-.5)-ry)*0.08;
   });
 
   new Camera(cam,{
-    onFrame:async()=>hands.send({image:cam})
+    onFrame:async()=>{
+      try{await hands.send({image:cam});}
+      catch(e){console.warn("Gestures stopped");}
+    },
+    width:640,height:480
   }).start();
 }
-initHands();
 
 /* ================= ANIMATE ================= */
 function animate(){
   requestAnimationFrame(animate);
 
-  galaxyRoot.rotation.y+=0.00015;
+  planets.forEach(p=>{
+    p.a+=p.speed;
+    p.m.position.set(
+      Math.cos(p.a)*p.dist,
+      Math.sin(p.a*0.01)*0.8,
+      Math.sin(p.a)*p.dist
+    );
+  });
+
+  belt.rotation.y+=0.0004;
+
   galaxyRoot.scale.lerp(new THREE.Vector3(scale,scale,scale),0.08);
   galaxyRoot.rotation.x+=(rx-galaxyRoot.rotation.x)*0.05;
   galaxyRoot.rotation.y+=(ry-galaxyRoot.rotation.y)*0.05;
