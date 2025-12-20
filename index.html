@@ -214,33 +214,68 @@ function loadStars(){
 loadStars();
 
 /* ================= HAND GESTURES ================= */
-let scale=1, rx=0, ry=0;
+let scale = 1, rx = 0, ry = 0;
+let handBusy = false;
 
-function initHands(){
-  if(!window.Hands) return requestAnimationFrame(initHands);
+function initHands() {
+  if (!window.Hands || !window.Camera) {
+    requestAnimationFrame(initHands);
+    return;
+  }
 
-  const video=document.createElement("video");
-  video.style.display="none";
+  const video = document.createElement("video");
+  video.style.display = "none";
+  video.playsInline = true;
   document.body.appendChild(video);
 
-  const hands=new Hands({
-    locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+  const hands = new Hands({
+    locateFile: f =>
+      `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
   });
 
-  hands.setOptions({maxNumHands:1});
-  hands.onResults(r=>{
-    if(!r.multiHandLandmarks) return;
-    const lm=r.multiHandLandmarks[0];
-    const d=Math.hypot(lm[4].x-lm[8].x,lm[4].y-lm[8].y);
-    scale += ((0.7+d*5)-scale)*0.1;
-    rx += (lm[5].y-0.5-rx)*0.05;
-    ry += (lm[5].x-0.5-ry)*0.05;
+  // 🔒 SAFER SETTINGS (avoid SIMD crash)
+  hands.setOptions({
+    maxNumHands: 1,
+    modelComplexity: 0,
+    selfieMode: true
   });
 
-  new Camera(video,{
-    onFrame:async()=>hands.send({image:video})
-  }).start();
+  hands.onResults(results => {
+    handBusy = false;
+
+    if (!results.multiHandLandmarks) return;
+
+    const lm = results.multiHandLandmarks[0];
+    const pinch = Math.hypot(
+      lm[4].x - lm[8].x,
+      lm[4].y - lm[8].y
+    );
+
+    scale += ((0.7 + pinch * 4) - scale) * 0.08;
+    rx += (lm[5].y - 0.5 - rx) * 0.05;
+    ry += (lm[5].x - 0.5 - ry) * 0.05;
+  });
+
+  const cameraUtil = new Camera(video, {
+    onFrame: async () => {
+      // 🔒 CRITICAL GUARD
+      if (handBusy || video.readyState < 2) return;
+
+      handBusy = true;
+      try {
+        await hands.send({ image: video });
+      } catch (e) {
+        console.warn("MediaPipe hands crashed, disabling gestures");
+        cameraUtil.stop();
+      }
+    },
+    width: 640,
+    height: 480
+  });
+
+  cameraUtil.start();
 }
+
 initHands();
 
 /* ================= ANIMATE ================= */
