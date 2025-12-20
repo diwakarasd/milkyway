@@ -2,15 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Milky Way — 2 Arm + Galactic Core</title>
+<title>Milky Way — Cinematic Realism</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <style>
 html,body{margin:0;height:100%;background:#000;overflow:hidden}
 #ui{
   position:fixed;left:16px;top:16px;z-index:10;
-  background:rgba(0,0,0,.5);
+  background:rgba(0,0,0,.55);
   color:#fff;padding:12px 14px;
-  border-radius:10px;font-family:system-ui;font-size:13px;
+  border-radius:10px;
+  font-family:system-ui;font-size:13px;
 }
 canvas{display:block}
 </style>
@@ -19,15 +20,15 @@ canvas{display:block}
 
 <div id="ui">
 <b>Milky Way — Cinematic</b><br>
-2-arm spiral · Galactic Center glow<br>
-Scroll = Zoom · Drag = Rotate
+Diffuse spiral · Bright galactic core<br>
+Scroll = Zoom · Drag = Rotate<br>
+Arrow keys = Move · W/S = Up/Down
 </div>
 
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
-    "post": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/postprocessing/"
+    "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js"
   }
 }
 </script>
@@ -35,96 +36,79 @@ Scroll = Zoom · Drag = Rotate
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/controls/OrbitControls.js";
-import { EffectComposer } from "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/postprocessing/EffectComposer.js";
-import { RenderPass } from "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/postprocessing/UnrealBloomPass.js";
 
 /* ================= BASIC ================= */
 const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 1.05;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020208);
 
 const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 20000);
-camera.position.set(0, 220, 1400);
+camera.position.set(0, 300, 1500);
 
 /* ================= CONTROLS ================= */
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.enableZoom = true;
-controls.zoomSpeed = 1.2;
-controls.minDistance = 200;
-controls.maxDistance = 6000;
 controls.enablePan = false;
-
-/* ================= POST ================= */
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-composer.addPass(
-  new UnrealBloomPass(
-    new THREE.Vector2(innerWidth, innerHeight),
-    0.7,   // bloom strength
-    0.45,
-    0.8
-  )
-);
+controls.zoomSpeed = 1.2;
+controls.minDistance = 300;
+controls.maxDistance = 8000;
 
 /* ================= ROOT ================= */
-const galaxyRoot = new THREE.Group();
-scene.add(galaxyRoot);
+const galaxy = new THREE.Group();
+scene.add(galaxy);
 
 /* ================= TEXTURES ================= */
-const tl = new THREE.TextureLoader();
-const starTex = tl.load(
+const loader = new THREE.TextureLoader();
+const starTex = loader.load(
   "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/sprites/disc.png"
 );
-const smokeTex = tl.load(
+const smokeTex = loader.load(
   "https://diwakarasd.github.io/galaxy-textures/smoke.png"
 );
 
-/* ================= 2-ARM SCATTERED MILKY WAY ================= */
-function createMilkyWay() {
-  const arms = 2; // REDUCED ARMS
-  const stars = 32000;
+/* ================= REALISTIC DISPERSED SPIRAL ================= */
+function createGalaxy() {
+  const arms = 2;
+  const count = 36000;
   const pos = [];
   const col = [];
 
-  for (let i = 0; i < stars; i++) {
-    const isArm = Math.random() < 0.7;
-    const radius = Math.pow(Math.random(), 0.45) * 3000;
+  for (let i = 0; i < count; i++) {
+    const r = Math.pow(Math.random(), 0.42) * 3200;
+    const arm = Math.floor(Math.random() * arms);
 
-    let angle;
-    if (isArm) {
-      const arm = Math.floor(Math.random() * arms);
-      angle =
-        radius * 0.003 +
-        arm * (Math.PI * 2 / arms) +
-        (Math.random() - 0.5) * 0.55; // blurred arms
-    } else {
-      angle = Math.random() * Math.PI * 2;
+    let angle =
+      r * 0.0028 +
+      arm * (Math.PI * 2 / arms) +
+      (Math.random() - 0.5) * 1.1; // BREAK PERFECT SPIRAL
+
+    // leak stars between arms
+    if (Math.random() < 0.35) {
+      angle += (Math.random() - 0.5) * 2.4;
     }
 
-    const scatter = (1 - Math.exp(-radius / 1000)) * 260;
+    const spread = (1 - Math.exp(-r / 1100)) * 380;
 
-    const x = Math.cos(angle) * radius + (Math.random() - 0.5) * scatter;
-    const z = Math.sin(angle) * radius + (Math.random() - 0.5) * scatter;
+    const x = Math.cos(angle) * r + (Math.random() - 0.5) * spread;
+    const z = Math.sin(angle) * r + (Math.random() - 0.5) * spread;
     const y =
       (Math.random() - 0.5) *
-      (140 + Math.random() * 200) *
-      Math.exp(-radius / 1600);
+      (180 + Math.random() * 260) *
+      Math.exp(-r / 1800);
 
     pos.push(x, y, z);
 
     const c = new THREE.Color();
     c.setHSL(
-      0.57 + radius / 5200,
+      0.55 + r / 6000,
       0.55 + Math.random() * 0.2,
-      0.65 + Math.random() * 0.1
+      0.6 + Math.random() * 0.15
     );
     col.push(c.r, c.g, c.b);
   }
@@ -134,7 +118,7 @@ function createMilkyWay() {
   geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
 
   const mat = new THREE.PointsMaterial({
-    size: 1.2,
+    size: 1.25,
     map: starTex,
     vertexColors: true,
     transparent: true,
@@ -142,145 +126,116 @@ function createMilkyWay() {
     depthWrite: false
   });
 
-  galaxyRoot.add(new THREE.Points(geo, mat));
+  galaxy.add(new THREE.Points(geo, mat));
 }
-createMilkyWay();
+createGalaxy();
 
-/* ================= NEBULA (LIGHT) ================= */
-for (let i = 0; i < 80; i++) {
-  const sprite = new THREE.Sprite(
+/* ================= RANDOM OUTER STARS ================= */
+function createOuterStars(count = 6000) {
+  const pos = [];
+  for (let i = 0; i < count; i++) {
+    const r = 4000 + Math.random() * 6000;
+    const a = Math.random() * Math.PI * 2;
+    pos.push(
+      Math.cos(a) * r,
+      (Math.random() - 0.5) * 4000,
+      Math.sin(a) * r
+    );
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+
+  const mat = new THREE.PointsMaterial({
+    size: 1.0,
+    map: starTex,
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.45,
+    depthWrite: false
+  });
+
+  galaxy.add(new THREE.Points(geo, mat));
+}
+createOuterStars();
+
+/* ================= LIGHT NEBULA ================= */
+for (let i = 0; i < 70; i++) {
+  const s = new THREE.Sprite(
     new THREE.SpriteMaterial({
       map: smokeTex,
-      color: new THREE.Color().setHSL(
-        0.6 + Math.random() * 0.2,
-        0.6,
-        0.5
-      ),
+      color: new THREE.Color().setHSL(0.62, 0.5, 0.45),
+      opacity: 0.05,
       transparent: true,
-      opacity: 0.06,
       depthWrite: false
     })
   );
-
-  const r = 700 + Math.random() * 2600;
+  const r = 800 + Math.random() * 2600;
   const a = Math.random() * Math.PI * 2;
-  sprite.position.set(
+  s.position.set(
     Math.cos(a) * r,
     (Math.random() - 0.5) * 300,
     Math.sin(a) * r
   );
-
-  const s = 1000 + Math.random() * 1400;
-  sprite.scale.set(s, s, 1);
-  galaxyRoot.add(sprite);
+  const scale = 1000 + Math.random() * 1400;
+  s.scale.set(scale, scale, 1);
+  galaxy.add(s);
 }
 
-/* ================= GALACTIC CENTER GLOW ================= */
-const coreGroup = new THREE.Group();
-galaxyRoot.add(coreGroup);
-
-// Dark core
-coreGroup.add(
-  new THREE.Mesh(
-    new THREE.SphereGeometry(120, 48, 32),
-    new THREE.MeshBasicMaterial({ color: 0x040404 })
-  )
+/* ================= GALACTIC CENTER (WHITE CORE) ================= */
+const core = new THREE.Sprite(
+  new THREE.SpriteMaterial({
+    map: starTex,
+    color: 0xffffff,
+    opacity: 0.9,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  })
 );
+core.scale.set(600, 600, 1);
+galaxy.add(core);
 
-// Lens-flare style glow
-for (let i = 0; i < 4; i++) {
-  const glow = new THREE.Sprite(
+for (let i = 0; i < 3; i++) {
+  const halo = new THREE.Sprite(
     new THREE.SpriteMaterial({
       map: starTex,
-      color: 0xffddaa,
-      transparent: true,
+      color: 0xfff6e0,
       opacity: 0.25 / (i + 1),
       blending: THREE.AdditiveBlending,
       depthWrite: false
     })
   );
-  const scale = 350 + i * 250;
-  glow.scale.set(scale, scale, 1);
-  coreGroup.add(glow);
+  const s = 900 + i * 700;
+  halo.scale.set(s, s, 1);
+  galaxy.add(halo);
 }
 
-/* ================= SOLAR SYSTEM ================= */
-const solar = new THREE.Group();
-solar.position.set(1100, 0, 400);
-galaxyRoot.add(solar);
+/* ================= KEYBOARD MOVEMENT ================= */
+const move = { x:0, y:0, z:0 };
+addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft") move.x = -1;
+  if (e.key === "ArrowRight") move.x = 1;
+  if (e.key === "ArrowUp") move.z = -1;
+  if (e.key === "ArrowDown") move.z = 1;
+  if (e.key === "w") move.y = 1;
+  if (e.key === "s") move.y = -1;
+});
+addEventListener("keyup", () => {
+  move.x = move.y = move.z = 0;
+});
 
-const sun = new THREE.Mesh(
-  new THREE.SphereGeometry(14, 48, 32),
-  new THREE.MeshBasicMaterial({
-    map: tl.load("https://diwakarasd.github.io/galaxy-textures/2k_sun.jpg")
-  })
-);
-solar.add(sun);
-
-const sunGlow = new THREE.Sprite(
-  new THREE.SpriteMaterial({
-    map: starTex,
-    color: 0xffcc88,
-    opacity: 0.25,
-    blending: THREE.AdditiveBlending
-  })
-);
-sunGlow.scale.set(70, 70, 1);
-sun.add(sunGlow);
-
-/* ================= PLANETS ================= */
-const planets = [];
-function planet(size, dist, speed, tex, ring=false) {
-  const pivot = new THREE.Object3D();
-  solar.add(pivot);
-
-  const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(size, 32, 32),
-    new THREE.MeshBasicMaterial({ map: tex })
-  );
-  pivot.add(mesh);
-
-  if (ring) {
-    const ringMesh = new THREE.Mesh(
-      new THREE.RingGeometry(size * 1.4, size * 2.6, 64),
-      new THREE.MeshBasicMaterial({
-        map: tl.load("https://diwakarasd.github.io/galaxy-textures/2k_saturn_ring_alpha.png"),
-        transparent: true,
-        side: THREE.DoubleSide,
-        depthWrite: false
-      })
-    );
-    ringMesh.rotation.x = Math.PI / 2 - 0.35;
-    mesh.add(ringMesh);
-  }
-
-  planets.push({ pivot, mesh, dist, speed, a: Math.random() * Math.PI * 2 });
-}
-
-planet(2, 30, 0.014, tl.load("https://diwakarasd.github.io/galaxy-textures/2k_mercury.jpg"));
-planet(3.5, 42, 0.012, tl.load("https://diwakarasd.github.io/galaxy-textures/2k_venus_surface.jpg"));
-planet(3.8, 56, 0.01, tl.load("https://diwakarasd.github.io/galaxy-textures/2k_earth_daymap.jpg"));
-planet(2.4, 72, 0.008, tl.load("https://diwakarasd.github.io/galaxy-textures/2k_mars.jpg"));
-planet(7, 96, 0.004, tl.load("https://diwakarasd.github.io/galaxy-textures/2k_jupiter.jpg"));
-planet(6.2, 126, 0.003, tl.load("https://diwakarasd.github.io/galaxy-textures/2k_saturn.jpg"), true);
-
-/* ================= ANIMATION ================= */
+/* ================= ANIMATE ================= */
 function animate() {
   requestAnimationFrame(animate);
 
-  planets.forEach(p => {
-    p.a += p.speed;
-    p.mesh.position.set(
-      Math.cos(p.a) * p.dist,
-      0,
-      Math.sin(p.a) * p.dist
-    );
-  });
+  galaxy.rotation.y += 0.00006;
 
-  galaxyRoot.rotation.y += 0.00008;
+  camera.position.x += move.x * 6;
+  camera.position.y += move.y * 6;
+  camera.position.z += move.z * 6;
 
   controls.update();
-  composer.render();
+  renderer.render(scene, camera);
 }
 animate();
 
@@ -289,7 +244,6 @@ addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
-  composer.setSize(innerWidth, innerHeight);
 });
 </script>
 </body>
