@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Milky Way — Cinematic Realism</title>
+<title>Milky Way — Cinematic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <style>
 html,body{margin:0;height:100%;background:#000;overflow:hidden}
@@ -20,9 +20,8 @@ canvas{display:block}
 
 <div id="ui">
 <b>Milky Way — Cinematic</b><br>
-Diffuse spiral · Bright galactic core<br>
 Scroll = Zoom · Drag = Rotate<br>
-Arrow keys = Move · W/S = Up/Down
+Arrow keys = Move (strafe & forward)
 </div>
 
 <script type="importmap">
@@ -72,7 +71,7 @@ const smokeTex = loader.load(
   "https://diwakarasd.github.io/galaxy-textures/smoke.png"
 );
 
-/* ================= REALISTIC DISPERSED SPIRAL ================= */
+/* ================= SPIRAL GALAXY (UNCHANGED LOGIC) ================= */
 function createGalaxy() {
   const arms = 2;
   const count = 36000;
@@ -86,9 +85,8 @@ function createGalaxy() {
     let angle =
       r * 0.0028 +
       arm * (Math.PI * 2 / arms) +
-      (Math.random() - 0.5) * 1.1; // BREAK PERFECT SPIRAL
+      (Math.random() - 0.5) * 1.1;
 
-    // leak stars between arms
     if (Math.random() < 0.35) {
       angle += (Math.random() - 0.5) * 2.4;
     }
@@ -130,36 +128,7 @@ function createGalaxy() {
 }
 createGalaxy();
 
-/* ================= RANDOM OUTER STARS ================= */
-function createOuterStars(count = 6000) {
-  const pos = [];
-  for (let i = 0; i < count; i++) {
-    const r = 4000 + Math.random() * 6000;
-    const a = Math.random() * Math.PI * 2;
-    pos.push(
-      Math.cos(a) * r,
-      (Math.random() - 0.5) * 4000,
-      Math.sin(a) * r
-    );
-  }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-
-  const mat = new THREE.PointsMaterial({
-    size: 1.0,
-    map: starTex,
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.45,
-    depthWrite: false
-  });
-
-  galaxy.add(new THREE.Points(geo, mat));
-}
-createOuterStars();
-
-/* ================= LIGHT NEBULA ================= */
+/* ================= NEBULA (COLOR UNCHANGED) ================= */
 for (let i = 0; i < 70; i++) {
   const s = new THREE.Sprite(
     new THREE.SpriteMaterial({
@@ -182,57 +151,143 @@ for (let i = 0; i < 70; i++) {
   galaxy.add(s);
 }
 
-/* ================= GALACTIC CENTER (WHITE CORE) ================= */
+/* ================= GALACTIC CENTER (WHITE, FEATHERED ONLY) ================= */
+const coreGroup = new THREE.Group();
+galaxy.add(coreGroup);
+
+// bright core
 const core = new THREE.Sprite(
   new THREE.SpriteMaterial({
     map: starTex,
     color: 0xffffff,
-    opacity: 0.9,
+    opacity: 0.85,
     blending: THREE.AdditiveBlending,
     depthWrite: false
   })
 );
-core.scale.set(600, 600, 1);
-galaxy.add(core);
+core.scale.set(520, 480, 1);
+coreGroup.add(core);
 
-for (let i = 0; i < 3; i++) {
+// irregular feather
+for (let i = 0; i < 4; i++) {
   const halo = new THREE.Sprite(
     new THREE.SpriteMaterial({
-      map: starTex,
-      color: 0xfff6e0,
-      opacity: 0.25 / (i + 1),
-      blending: THREE.AdditiveBlending,
+      map: smokeTex,
+      color: 0xffffff,
+      opacity: 0.12 / (i + 1),
+      transparent: true,
       depthWrite: false
     })
   );
-  const s = 900 + i * 700;
-  halo.scale.set(s, s, 1);
-  galaxy.add(halo);
+  halo.scale.set(800 + i * 450, 620 + i * 380, 1);
+  halo.rotation.z = Math.random();
+  coreGroup.add(halo);
 }
 
-/* ================= KEYBOARD MOVEMENT ================= */
-const move = { x:0, y:0, z:0 };
+/* ================= SOLAR SYSTEM (UNCHANGED) ================= */
+const solar = new THREE.Group();
+solar.position.set(1100, 0, 400);
+galaxy.add(solar);
+
+const sun = new THREE.Mesh(
+  new THREE.SphereGeometry(14, 48, 32),
+  new THREE.MeshBasicMaterial({
+    map: loader.load("https://diwakarasd.github.io/galaxy-textures/2k_sun.jpg")
+  })
+);
+solar.add(sun);
+
+const sunGlow = new THREE.Sprite(
+  new THREE.SpriteMaterial({
+    map: starTex,
+    color: 0xffcc88,
+    opacity: 0.25,
+    blending: THREE.AdditiveBlending
+  })
+);
+sunGlow.scale.set(70, 70, 1);
+sun.add(sunGlow);
+
+/* ================= PLANETS ================= */
+const planets = [];
+function planet(size, dist, speed, tex, ring=false) {
+  const pivot = new THREE.Object3D();
+  solar.add(pivot);
+
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(size, 32, 32),
+    new THREE.MeshBasicMaterial({ map: tex })
+  );
+  pivot.add(mesh);
+
+  if (ring) {
+    const ringMesh = new THREE.Mesh(
+      new THREE.RingGeometry(size * 1.4, size * 2.6, 64),
+      new THREE.MeshBasicMaterial({
+        map: loader.load("https://diwakarasd.github.io/galaxy-textures/2k_saturn_ring_alpha.png"),
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      })
+    );
+    ringMesh.rotation.x = Math.PI / 2 - 0.35;
+    mesh.add(ringMesh);
+  }
+
+  planets.push({ mesh, dist, speed, a: Math.random() * Math.PI * 2 });
+}
+
+planet(2, 30, 0.014, loader.load("https://diwakarasd.github.io/galaxy-textures/2k_mercury.jpg"));
+planet(3.5, 42, 0.012, loader.load("https://diwakarasd.github.io/galaxy-textures/2k_venus_surface.jpg"));
+planet(3.8, 56, 0.01, loader.load("https://diwakarasd.github.io/galaxy-textures/2k_earth_daymap.jpg"));
+planet(2.4, 72, 0.008, loader.load("https://diwakarasd.github.io/galaxy-textures/2k_mars.jpg"));
+planet(7, 96, 0.004, loader.load("https://diwakarasd.github.io/galaxy-textures/2k_jupiter.jpg"));
+planet(6.2, 126, 0.003, loader.load("https://diwakarasd.github.io/galaxy-textures/2k_saturn.jpg"), true);
+
+/* ================= CAMERA TRANSLATION (FIXED) ================= */
+const move = { l:false, r:false, f:false, b:false };
+
 addEventListener("keydown", e => {
-  if (e.key === "ArrowLeft") move.x = -1;
-  if (e.key === "ArrowRight") move.x = 1;
-  if (e.key === "ArrowUp") move.z = -1;
-  if (e.key === "ArrowDown") move.z = 1;
-  if (e.key === "w") move.y = 1;
-  if (e.key === "s") move.y = -1;
+  if (e.key === "ArrowLeft") move.l = true;
+  if (e.key === "ArrowRight") move.r = true;
+  if (e.key === "ArrowUp") move.f = true;
+  if (e.key === "ArrowDown") move.b = true;
 });
-addEventListener("keyup", () => {
-  move.x = move.y = move.z = 0;
+
+addEventListener("keyup", e => {
+  if (e.key === "ArrowLeft") move.l = false;
+  if (e.key === "ArrowRight") move.r = false;
+  if (e.key === "ArrowUp") move.f = false;
+  if (e.key === "ArrowDown") move.b = false;
 });
 
 /* ================= ANIMATE ================= */
 function animate() {
   requestAnimationFrame(animate);
 
-  galaxy.rotation.y += 0.00006;
+  planets.forEach(p => {
+    p.a += p.speed;
+    p.mesh.position.set(
+      Math.cos(p.a) * p.dist,
+      0,
+      Math.sin(p.a) * p.dist
+    );
+  });
 
-  camera.position.x += move.x * 6;
-  camera.position.y += move.y * 6;
-  camera.position.z += move.z * 6;
+  const dir = new THREE.Vector3();
+  camera.getWorldDirection(dir);
+  dir.y = 0;
+  dir.normalize();
+
+  const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize();
+  const speed = 6;
+
+  if (move.f) camera.position.addScaledVector(dir, speed);
+  if (move.b) camera.position.addScaledVector(dir, -speed);
+  if (move.l) camera.position.addScaledVector(right, -speed);
+  if (move.r) camera.position.addScaledVector(right, speed);
+
+  galaxy.rotation.y += 0.00006;
 
   controls.update();
   renderer.render(scene, camera);
