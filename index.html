@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Cinematic Milky Way + Solar System</title>
+<title>Cinematic Milky Way</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<link rel="icon" href="data:,">
 <style>
 html,body{margin:0;height:100%;background:#000;overflow:hidden}
 #ui{
@@ -14,12 +13,8 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden}
   font-family:system-ui;font-size:13px;
 }
 button{
-  margin-top:8px;
-  width:100%;
-  padding:6px;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
+  margin-top:8px;width:100%;
+  padding:6px;border:none;border-radius:6px;
 }
 canvas{display:block}
 </style>
@@ -28,10 +23,9 @@ canvas{display:block}
 
 <div id="ui">
 <b>Milky Way (Cinematic)</b><br>
-🎬 Visual First<br>
-🪐 Solar System Embedded<br>
-✋ Pinch = Zoom<br>
-✋ Palm = Rotate
+🎬 Visual-first<br>
+🌫️ Volumetric fog<br>
+🪐 Embedded solar system<br>
 <button id="enableGestures">Enable Gestures</button>
 </div>
 
@@ -50,23 +44,23 @@ import * as THREE from "three";
 import { OrbitControls } from
 "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/controls/OrbitControls.js";
 
-/* ================= BASIC ================= */
+/* ================= RENDERER / SCENE ================= */
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.setClearColor(0x000006);
+renderer.setClearColor(0x020208);
 document.body.appendChild(renderer.domElement);
 
 const scene=new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x050510, 0.00055);   // ⭐ cinematic fog
+scene.fog = new THREE.FogExp2(0x070715, 0.0008);
 
-const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.1,9000);
-camera.position.set(0,140,520);
+const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.1,10000);
+camera.position.set(0,150,600);
 
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;
 controls.minDistance=80;
-controls.maxDistance=3000;
+controls.maxDistance=4000;
 
 /* ================= ROOT ================= */
 const galaxyRoot=new THREE.Group();
@@ -88,32 +82,28 @@ const T={
   saturnRing:tl.load("https://diwakarasd.github.io/galaxy-textures/2k_saturn_ring_alpha.png")
 };
 
-/* ================= CINEMATIC GALAXY ================= */
+/* ================= GALAXY SPIRAL ================= */
 function createGalaxy(){
-  const arms=4;
-  const starsPerArm=4200;   // 🔻 reduced safely
-  const radius=1500;
-
-  const pos=[],col=[];
+  const arms=4, starsPerArm=3200, radius=1600;
+  const pos=[], col=[];
 
   for(let a=0;a<arms;a++){
     const armOffset=(a/arms)*Math.PI*2;
     for(let i=0;i<starsPerArm;i++){
-      const t=Math.pow(Math.random(),0.3);
-      const angle=t*6.5+armOffset+(Math.random()-0.5)*0.8;
-      const r=t*radius*(0.8+Math.random()*0.4);
+      const t=Math.pow(Math.random(),0.28);
+      const angle=t*6.5+armOffset+(Math.random()-0.5)*1.1;
+      const r=t*radius*(0.75+Math.random()*0.5);
 
       pos.push(
         Math.cos(angle)*r,
-        (Math.random()-0.5)*140*Math.exp(-t*3),
+        (Math.random()-0.5)*220*Math.exp(-t*3),
         Math.sin(angle)*r
       );
 
       let c=new THREE.Color();
-      if(t<0.18) c.setRGB(1.0,0.95,0.85);
+      if(t<0.2) c.setRGB(1,0.95,0.85);
       else if(t<0.55) c.setRGB(0.9,0.55,1.0);
       else c.setRGB(0.55,0.7,1.0);
-
       col.push(c.r,c.g,c.b);
     }
   }
@@ -125,7 +115,7 @@ function createGalaxy(){
   galaxyRoot.add(new THREE.Points(
     g,
     new THREE.PointsMaterial({
-      size:1.6,
+      size:1.9,
       vertexColors:true,
       transparent:true,
       blending:THREE.AdditiveBlending,
@@ -134,76 +124,86 @@ function createGalaxy(){
   ));
 }
 
-/* ================= NEBULA / SMOKE ================= */
-function addNebula(){
-  const count=1800;
-  const pos=[];
-  for(let i=0;i<count;i++){
-    const a=Math.random()*Math.PI*2;
-    const r=400+Math.random()*1000;
-    pos.push(
-      Math.cos(a)*r,
-      (Math.random()-0.5)*260,
-      Math.sin(a)*r
-    );
-  }
-  const g=new THREE.BufferGeometry();
-  g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+/* ================= NEBULA / SMOKE LAYERS ================= */
+function addNebulaLayers(){
+  const layers=[
+    {count:900,size:55,opacity:0.04,color:0x6655ff},
+    {count:700,size:85,opacity:0.03,color:0xaa66ff},
+    {count:600,size:120,opacity:0.025,color:0x4466ff}
+  ];
 
-  galaxyRoot.add(new THREE.Points(
-    g,
-    new THREE.PointsMaterial({
-      size:38,
-      map:starTex,
-      transparent:true,
-      opacity:0.035,
-      color:0x7755ff,
-      depthWrite:false
-    })
-  ));
+  layers.forEach(L=>{
+    const pos=[];
+    for(let i=0;i<L.count;i++){
+      const a=Math.random()*Math.PI*2;
+      const r=300+Math.random()*1200;
+      pos.push(
+        Math.cos(a)*r,
+        (Math.random()-0.5)*350,
+        Math.sin(a)*r
+      );
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+    galaxyRoot.add(new THREE.Points(
+      g,
+      new THREE.PointsMaterial({
+        size:L.size,
+        map:starTex,
+        transparent:true,
+        opacity:L.opacity,
+        color:L.color,
+        depthWrite:false
+      })
+    ));
+  });
 }
 
-/* ================= CORE GLOW ================= */
+/* ================= CORE LIGHT BLOOM ================= */
 function coreGlow(){
-  for(let i=0;i<6;i++){
+  for(let i=0;i<8;i++){
     const s=new THREE.Sprite(
       new THREE.SpriteMaterial({
         map:glowTex,
         color:0xffe6cc,
-        opacity:0.12,
+        opacity:0.1,
         blending:THREE.AdditiveBlending
       })
     );
-    s.scale.set(260+i*200,260+i*200,1);
+    s.scale.set(300+i*220,300+i*220,1);
     galaxyRoot.add(s);
   }
 }
 
 createGalaxy();
-addNebula();
+addNebulaLayers();
 coreGlow();
 
-/* ================= SOLAR SYSTEM (OFFSET) ================= */
+/* ================= SOLAR SYSTEM ================= */
 const solarSystem=new THREE.Group();
-solarSystem.position.set(420,0,180); // ⭐ embedded, not center
+solarSystem.position.set(420,0,220);
 galaxyRoot.add(solarSystem);
 
+/* SUN */
 const sun=new THREE.Mesh(
-  new THREE.SphereGeometry(11,48,32),
+  new THREE.SphereGeometry(10.5,48,32),
   new THREE.MeshBasicMaterial({map:T.sun})
 );
 solarSystem.add(sun);
 
-const sunGlow=new THREE.Sprite(
-  new THREE.SpriteMaterial({
-    map:glowTex,
-    color:0xffcc88,
-    opacity:0.18,
-    blending:THREE.AdditiveBlending
-  })
-);
-sunGlow.scale.set(70,70,1);
-solarSystem.add(sunGlow);
+/* Sun glow ATTACHED */
+for(let i=0;i<3;i++){
+  const g=new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map:glowTex,
+      color:0xffcc88,
+      opacity:0.12-i*0.03,
+      blending:THREE.AdditiveBlending
+    })
+  );
+  g.scale.set(60+i*35,60+i*35,1);
+  sun.add(g);
+}
 
 /* ================= PLANETS ================= */
 function planet(size,dist,speed,tex,ring=false){
@@ -242,34 +242,31 @@ const planets=[
   planet(5.0,82,0.003,T.saturn,true)
 ];
 
-/* ================= ASTEROID BELT ================= */
+/* ASTEROID BELT */
 const beltPos=[];
-for(let i=0;i<1200;i++){
+for(let i=0;i<900;i++){
   const a=Math.random()*Math.PI*2;
   const r=48+Math.random()*10;
   beltPos.push(
     Math.cos(a)*r,
-    (Math.random()-0.5)*1.2,
+    (Math.random()-0.5)*1.4,
     Math.sin(a)*r
   );
 }
-const beltGeo=new THREE.BufferGeometry();
-beltGeo.setAttribute("position",new THREE.Float32BufferAttribute(beltPos,3));
 const belt=new THREE.Points(
-  beltGeo,
+  new THREE.BufferGeometry().setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(beltPos,3)
+  ),
   new THREE.PointsMaterial({
-    size:0.07,
-    color:0x9b8f7f,
-    transparent:true,
-    opacity:0.8,
-    depthWrite:false
+    size:0.08,color:0x9b8f7f,
+    transparent:true,opacity:0.8,depthWrite:false
   })
 );
 solarSystem.add(belt);
 
-/* ================= HAND GESTURES (SAFE) ================= */
+/* ================= HAND GESTURES (OPT-IN SAFE) ================= */
 let scale=1,rx=0,ry=0,gestures=false;
-
 document.getElementById("enableGestures").onclick=()=>{
   if(gestures) return;
   gestures=true;
@@ -300,9 +297,8 @@ function initHands(){
   new Camera(cam,{
     onFrame:async()=>{
       try{await hands.send({image:cam});}
-      catch(e){console.warn("Gestures stopped");}
-    },
-    width:640,height:480
+      catch(e){}
+    }
   }).start();
 }
 
