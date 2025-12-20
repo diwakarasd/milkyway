@@ -21,7 +21,6 @@ canvas{display:block}
 <div id="ui">Solar System + Milky Way loaded</div>
 
 <!-- Hipparcos star data (GLOBAL) -->
-import { hipparcos_6_5 } from "./hipparcos_6.5_concise.js";
 
 <script type="importmap">
 {
@@ -32,6 +31,8 @@ import { hipparcos_6_5 } from "./hipparcos_6.5_concise.js";
 </script>
 
 <script type="module">
+import { hipparcos_6_5 } from "./hipparcos_6.5_concise.js";
+
 import * as THREE from "three";
 import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/controls/OrbitControls.js";
 
@@ -137,6 +138,7 @@ const planets = [
 
 const galaxyRoot = new THREE.Group();
 scene.add(galaxyRoot);
+const starMap = {};
 
 function loadStars(){
   const pos = [];
