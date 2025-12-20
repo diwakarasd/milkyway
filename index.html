@@ -72,6 +72,13 @@ function raDecToVec3(raDeg, decDeg, r=1200){
 const solarSystem = new THREE.Group();
 scene.add(solarSystem);
 
+solarSystem.position.set(
+  -800,   // galactic radius
+  20,     // slight elevation
+  300
+);
+
+
 const tl = new THREE.TextureLoader();
 const T = {
   sun: tl.load("https://diwakarasd.github.io/galaxy-textures/2k_sun.jpg"),
@@ -92,16 +99,42 @@ const sun = new THREE.Mesh(
 solarSystem.add(sun);
 
 solarSystem.add(new THREE.PointLight(0xffffff, 3, 600));
+// ===== SUN GLOW =====
+const sunGlowTex = tl.load(
+  "https://threejs.org/examples/textures/lensflare/lensflare0.png"
+);
 
+const sunGlow = new THREE.Sprite(
+  new THREE.SpriteMaterial({
+    map: sunGlowTex,
+    color: 0xffcc66,
+    transparent: true,
+    blending: THREE.AdditiveBlending
+  })
+);
+
+sunGlow.scale.set(90, 90, 1);
+sun.add(sunGlow);
+
+  const sunLight = new THREE.PointLight(0xffffff, 6, 1500);
+sunLight.position.set(0,0,0);
+solarSystem.add(sunLight);
+ 
 /* Planet factory */
 function createPlanet(size, dist, speed, texture, ring=false){
   const pivot = new THREE.Object3D();
   solarSystem.add(pivot);
 
-  const planet = new THREE.Mesh(
-    new THREE.SphereGeometry(size,32,32),
-    new THREE.MeshStandardMaterial({ map: texture })
-  );
+  
+const planet = new THREE.Mesh(
+  new THREE.SphereGeometry(size, 48, 32),
+  new THREE.MeshPhongMaterial({
+    map: texture,
+    shininess: 15
+  })
+);
+
+  
   planet.position.x = dist;
   pivot.add(planet);
 
@@ -224,6 +257,26 @@ function loadStars(){
 
 /* Load stars after first render */
 setTimeout(loadStars, 100);
+
+
+function createMilkyWayDisk() {
+  const geo = new THREE.RingGeometry(800, 1600, 128);
+  const mat = new THREE.MeshBasicMaterial({
+    map: tl.load(
+      "https://diwakarasd.github.io/milkyway/milkywayband.jpg"
+    ),
+    transparent: true,
+    opacity: 0.55,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+
+  const disk = new THREE.Mesh(geo, mat);
+  disk.rotation.x = Math.PI / 2;
+  galaxyRoot.add(disk);
+}
+createMilkyWayDisk();
+
 
 /* ================= ANIMATE ================= */
 function animate(){
