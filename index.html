@@ -156,17 +156,28 @@ function loadStars(){
   let skipped = 0;
 
   hipparcos_6_5.forEach(s => {
-    // 🔴 FILTER BAD DATA
-    if (!isValidStar(s)) {
+    // unpack array
+    const HIP   = s[0];
+    const Vmag  = s[1];
+    const RAdeg = s[2];
+    const DEdeg = s[3];
+
+    // validate
+    if (
+      !Number.isFinite(HIP) ||
+      !Number.isFinite(Vmag) ||
+      !Number.isFinite(RAdeg) ||
+      !Number.isFinite(DEdeg)
+    ) {
       skipped++;
       return;
     }
 
-    starMap["HIP" + s.HIP] = s;
+    // store for constellations
+    starMap["HIP" + HIP] = { HIP, Vmag, RAdeg, DEdeg };
 
-    const v = raDecToVec3(s.RAdeg, s.DEdeg);
+    const v = raDecToVec3(RAdeg, DEdeg);
 
-    // 🔴 SAFETY CHECK
     if (
       !Number.isFinite(v.x) ||
       !Number.isFinite(v.y) ||
@@ -178,7 +189,7 @@ function loadStars(){
 
     pos.push(v.x, v.y, v.z);
 
-    const b = Math.max(0.2, 1.6 - s.Vmag * 0.35);
+    const b = Math.max(0.2, 1.6 - Vmag * 0.35);
     col.push(b, b, b);
   });
 
@@ -196,7 +207,7 @@ function loadStars(){
     new THREE.Float32BufferAttribute(col, 3)
   );
 
-  g.computeBoundingSphere(); // ✅ now safe
+  g.computeBoundingSphere();
 
   galaxyRoot.add(
     new THREE.Points(
